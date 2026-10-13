@@ -27,13 +27,38 @@
         </div>
 
         <div class="flex items-center gap-2">
+            {{-- DomPDF Download Button --}}
+            <a href="{{ route('receipts.pdf', ['receipt' => $receipt, 'action' => 'download']) }}"
+               class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold shadow-sm transition"
+               title="Export and Download Official PDF Voucher">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Download PDF
+            </a>
+
+            {{-- Browser Print Button --}}
             <button onclick="window.print()"
                     class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
                 </svg>
-                Print Voucher
+                Print
             </button>
+
+            <form action="{{ route('receipts.destroy', $receipt) }}" method="POST" class="inline"
+                  onsubmit="return confirm('Reject receipt REC-{{ str_pad($receipt->id, 4, '0', STR_PAD_LEFT) }}? This will cancel this receipt and return invoice {{ $receipt->invoice->invoice_id ?? '' }} back to UNPAID status.');">
+                @csrf
+                @method('DELETE')
+                <button type="submit"
+                        class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition"
+                        title="Reject Receipt & Revert Invoice to Unpaid">
+                    <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    Reject Receipt
+                </button>
+            </form>
         </div>
     </div>
 

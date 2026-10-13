@@ -54,9 +54,13 @@ Route::get('/receipts',                           [ReceiptController::class, 'in
 Route::get('/receipts/create',                    [ReceiptController::class, 'create'])->name('receipts.create');
 Route::post('/receipts',                          [ReceiptController::class, 'store'])->name('receipts.store');
 Route::get('/receipts/{receipt}',                 [ReceiptController::class, 'show'])->name('receipts.show');
+Route::get('/receipts/{receipt}/pdf',             [ReceiptController::class, 'pdf'])->name('receipts.pdf');
+Route::delete('/receipts/{receipt}',              [ReceiptController::class, 'destroy'])->name('receipts.destroy');
+Route::post('/receipts/{receipt}/reject',         [ReceiptController::class, 'reject'])->name('receipts.reject');
 
 // Nested receipts routes under invoices for backward compatibility
 Route::get('/invoices/{invoice}/receipts',        [ReceiptController::class, 'invoiceReceipts'])->name('invoices.receipts.index');
 Route::get('/invoices/{invoice}/receipts/create', [ReceiptController::class, 'createForInvoice'])->name('invoices.receipts.create');
 Route::post('/invoices/{invoice}/receipts',       [ReceiptController::class, 'storeForInvoice'])->name('invoices.receipts.store');
+
 

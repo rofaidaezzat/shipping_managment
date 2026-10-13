@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Receipts;
 
+use App\Exports\ReceiptPdfExport;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Receipt;
@@ -81,6 +82,20 @@ class ReceiptController extends Controller
     {
         $receipt->load('invoice');
         return view('receipts.show', compact('receipt'));
+    }
+
+    /**
+     * Download or stream official receipt voucher PDF via DomPDF export.
+     */
+    public function pdf(Request $request, Receipt $receipt)
+    {
+        $export = new ReceiptPdfExport($receipt);
+
+        if ($request->query('action') === 'download') {
+            return $export->download();
+        }
+
+        return $export->stream();
     }
 
     /**
@@ -239,5 +254,69 @@ class ReceiptController extends Controller
     public function invoiceReceipts(Invoice $invoice)
     {
         return redirect()->route('receipts.index', ['search' => $invoice->invoice_id]);
+    }
+
+    /**
+     * Reject / Cancel a payment receipt and revert the invoice back to Unpaid status.
+     */
+    public function destroy(Request $request, Receipt $receipt)
+    {
+        $invoice = $receipt->invoice;
+        $receiptId = $receipt->id;
+        $amountPaid = $receipt->amount_paid;
+
+        DB::transaction(function () use ($receipt, $invoice) {
+            // 1. Delete the receipt
+            $receipt->delete();
+
+            // 2. Recheck remaining receipts for this invoice (if any)
+            if ($invoice) {
+                $remainingReceipts = $invoice->receipts()->get();
+                $totalRemainingPaid = (float) $remainingReceipts->sum('amount_paid');
+
+                if ($remainingReceipts->isEmpty()) {
+                    // No receipts left -> invoice returns completely to unpaid ($0.00 paid)
+                    $invoice->update([
+                        'is_paid'     => false,
+                        'paid_amount' => 0.00,
+                        'paid_at'     => null,
+                    ]);
+                } else {
+                    $isStillFullyPaid = $totalRemainingPaid >= (float) $invoice->total_amount && (float) $invoice->total_amount > 0;
+                    $invoice->update([
+                        'is_paid'     => $isStillFullyPaid,
+                        'paid_amount' => $totalRemainingPaid,
+                        'paid_at'     => $isStillFullyPaid ? $invoice->paid_at : null,
+                    ]);
+                }
+            }
+        });
+
+        $invoiceId = $invoice ? $invoice->invoice_id : '';
+        $msg = "Receipt #REC-" . str_pad($receiptId, 4, '0', STR_PAD_LEFT) . " (\$" . number_format($amountPaid, 2) . ") was rejected. Invoice {$invoiceId} has been returned to UNPAID status.";
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'status'  => 'success',
+                'code'    => 200,
+                'message' => $msg,
+                'data'    => $invoice ? $invoice->fresh() : null,
+            ], 200);
+        }
+
+        // If request originated from invoice show page, redirect back there
+        if ($request->header('referer') && $invoice && str_contains($request->header('referer'), "/invoices/{$invoice->id}")) {
+            return redirect()->route('invoices.show', $invoice)->with('success', $msg);
+        }
+
+        return redirect()->route('receipts.index')->with('success', $msg);
+    }
+
+    /**
+     * Alias for destroy method via POST /reject route.
+     */
+    public function reject(Request $request, Receipt $receipt)
+    {
+        return $this->destroy($request, $receipt);
     }
 }
