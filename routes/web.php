@@ -47,3 +47,16 @@ Route::get('/invoices/{invoice}',          [InvoiceController::class, 'show'])->
 Route::get('/invoices/{invoice}/edit',     [InvoiceController::class, 'edit'])->name('invoices.edit');
 Route::put('/invoices/{invoice}',          [InvoiceController::class, 'update'])->name('invoices.update');
 Route::delete('/invoices/{invoice}',       [InvoiceController::class, 'destroy'])->name('invoices.destroy');
+
+// ── Receipts Routes (Dedicated sidebar section & payments) ────────────
+use App\Http\Controllers\Receipts\ReceiptController;
+Route::get('/receipts',                           [ReceiptController::class, 'index'])->name('receipts.index');
+Route::get('/receipts/create',                    [ReceiptController::class, 'create'])->name('receipts.create');
+Route::post('/receipts',                          [ReceiptController::class, 'store'])->name('receipts.store');
+Route::get('/receipts/{receipt}',                 [ReceiptController::class, 'show'])->name('receipts.show');
+
+// Nested receipts routes under invoices for backward compatibility
+Route::get('/invoices/{invoice}/receipts',        [ReceiptController::class, 'invoiceReceipts'])->name('invoices.receipts.index');
+Route::get('/invoices/{invoice}/receipts/create', [ReceiptController::class, 'createForInvoice'])->name('invoices.receipts.create');
+Route::post('/invoices/{invoice}/receipts',       [ReceiptController::class, 'storeForInvoice'])->name('invoices.receipts.store');
+

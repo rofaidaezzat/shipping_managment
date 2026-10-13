@@ -61,11 +61,12 @@
     @endif
 
     <!-- Quick Stats Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
                 <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Invoices</span>
                 <h4 class="text-2xl font-bold text-slate-900 mt-1">{{ $invoices->count() }}</h4>
+                <p class="text-[11px] text-slate-400 mt-0.5">All registered invoices</p>
             </div>
             <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,8 +77,22 @@
 
         <div class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Invoiced</span>
+                <h4 class="text-2xl font-bold text-slate-900 mt-1">${{ number_format($totalInvoiced, 2) }}</h4>
+                <p class="text-[11px] text-slate-400 mt-0.5">المبلغ المطلوب دفعه</p>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                </svg>
+            </div>
+        </div>
+
+        <div class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
                 <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Collected</span>
                 <h4 class="text-2xl font-bold text-emerald-600 mt-1">${{ number_format($totalPaid, 2) }}</h4>
+                <p class="text-[11px] text-emerald-700/80 mt-0.5">المبلغ المدفوع</p>
             </div>
             <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,14 +103,13 @@
 
         <div class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
-                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Average Paid</span>
-                <h4 class="text-2xl font-bold text-slate-900 mt-1">
-                    ${{ $invoices->count() > 0 ? number_format($totalPaid / $invoices->count(), 2) : '0.00' }}
-                </h4>
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Outstanding Due</span>
+                <h4 class="text-2xl font-bold text-amber-600 mt-1">${{ number_format($totalOutstanding, 2) }}</h4>
+                <p class="text-[11px] text-amber-700/80 mt-0.5">المتبقي غير المحصل</p>
             </div>
             <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
             </div>
         </div>
@@ -132,6 +146,8 @@
                     <th class="py-3.5 px-6">Invoice #</th>
                     <th class="py-3.5 px-6">Date</th>
                     <th class="py-3.5 px-6">Customer Name</th>
+                    <th class="py-3.5 px-6 text-center">Status</th>
+                    <th class="py-3.5 px-6 text-right">Amount Due</th>
                     <th class="py-3.5 px-6 text-right">Paid Amount</th>
                     <th class="py-3.5 px-6 text-right">Actions</th>
                 </tr>
@@ -165,32 +181,77 @@
                         <td class="py-4 px-6 font-medium text-slate-900">
                             {{ $invoice->customer_name }}
                         </td>
-                        <td class="py-4 px-6 text-right font-mono font-semibold text-emerald-600 text-sm">
+                        {{-- Status Badge --}}
+                        <td class="py-4 px-6 text-center">
+                            @if($invoice->is_paid)
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    Paid
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                    Unpaid
+                                </span>
+                            @endif
+                        </td>
+                        {{-- Amount Due (المفروض يدفع) --}}
+                        <td class="py-4 px-6 text-right font-mono font-bold text-sm text-slate-900">
+                            ${{ number_format($invoice->total_amount, 2) }}
+                        </td>
+                        {{-- Paid Amount (المدفوع) --}}
+                        <td class="py-4 px-6 text-right font-mono font-semibold text-sm {{ $invoice->is_paid ? 'text-emerald-600' : 'text-slate-400' }}">
                             ${{ number_format($invoice->paid_amount, 2) }}
                         </td>
                         <td class="py-4 px-6 text-right">
-                            <div class="flex items-center justify-end gap-2">
+                            <div class="flex items-center justify-end gap-1">
+                                {{-- View --}}
                                 <a href="{{ route('invoices.show', $invoice) }}" class="p-1.5 text-slate-400 hover:text-indigo-600 transition" title="View Invoice">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                     </svg>
                                 </a>
+                                {{-- Record Payment (only if unpaid) --}}
+                                @if(!$invoice->is_paid)
+                                    <a href="{{ route('invoices.receipts.create', $invoice) }}"
+                                       class="p-1.5 text-slate-400 hover:text-emerald-600 transition" title="Record Payment">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </a>
+                                @else
+                                    <span class="p-1.5 text-emerald-400 cursor-default" title="Already Paid">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </span>
+                                @endif
+                                {{-- Edit --}}
                                 <a href="{{ route('invoices.edit', $invoice) }}" class="p-1.5 text-slate-400 hover:text-amber-600 transition" title="Edit">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                     </svg>
                                 </a>
-                                <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline"
-                                      onsubmit="return confirm('Are you sure you want to delete invoice {{ $invoice->invoice_id }}?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 transition" title="Delete">
+                                {{-- Delete: locked for paid invoices --}}
+                                @if($invoice->is_paid)
+                                    <span class="p-1.5 text-slate-200 cursor-not-allowed" title="Cannot delete: Invoice is Paid">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                         </svg>
-                                    </button>
-                                </form>
+                                    </span>
+                                @else
+                                    <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline"
+                                          onsubmit="return confirm('Are you sure you want to delete invoice {{ $invoice->invoice_id }}?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 transition" title="Delete">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                @endif
                             </div>
                         </td>
                     </tr>

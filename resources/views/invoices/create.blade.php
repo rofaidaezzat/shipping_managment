@@ -93,21 +93,32 @@
                 @enderror
             </div>
 
-            {{-- Paid Amount --}}
+            {{-- Total Amount (المبلغ المطلوب دفعه) --}}
             <div>
-                <label for="paid_amount" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Paid Amount ($ USD) <span class="text-rose-500">*</span>
+                <label for="total_amount" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Invoice Amount (Amount Due) <span class="text-rose-500">*</span>
+                    <span class="text-slate-400 font-normal lowercase">(المبلغ المطلوب دفعه)</span>
                 </label>
                 <div class="relative">
                     <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-semibold">$</span>
-                    <input type="number" step="0.01" min="0" name="paid_amount" id="paid_amount"
-                           value="{{ old('paid_amount', '0.00') }}" required
-                           class="w-full pl-8 pr-4 py-2.5 rounded-lg border {{ $errors->has('paid_amount') ? 'border-rose-400 bg-rose-50/30' : 'border-slate-300' }} focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-mono text-slate-900">
+                    <input type="number" step="0.01" min="0.01" name="total_amount" id="total_amount"
+                           value="{{ old('total_amount') }}" required
+                           placeholder="0.00"
+                           class="w-full pl-8 pr-4 py-2.5 rounded-lg border {{ $errors->has('total_amount') ? 'border-rose-400 bg-rose-50/30' : 'border-slate-300' }} focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-mono text-slate-900">
                 </div>
-                <p class="text-[11px] text-slate-400 mt-1">Total amount collected for this invoice.</p>
-                @error('paid_amount')
+                @error('total_amount')
                     <p class="text-xs text-rose-500 mt-1">{{ $message }}</p>
                 @enderror
+            </div>
+
+            {{-- Payment Status Info --}}
+            <div class="p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-3">
+                <svg class="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="text-sm text-amber-700">
+                    <strong>Note:</strong> The invoice will be created as <strong>Unpaid ($0.00 Paid)</strong> with the specified amount due. When you record a payment, it will be marked as <strong>Paid</strong>.
+                </p>
             </div>
 
             <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">

@@ -25,7 +25,9 @@ class InvoiceController extends Controller
         }
 
         $invoices = $query->orderBy('date', 'desc')->orderBy('id', 'desc')->get();
-        $totalPaid = $invoices->sum('paid_amount');
+        $totalInvoiced = $invoices->sum('total_amount');
+        $totalPaid = $invoices->where('is_paid', true)->sum('paid_amount');
+        $totalOutstanding = $invoices->where('is_paid', false)->sum('total_amount');
 
         // Identify duplicate invoice IDs
         $duplicateInvoiceIds = Invoice::select('invoice_id')
@@ -36,17 +38,19 @@ class InvoiceController extends Controller
 
         if ($request->wantsJson() || $request->query('format') === 'json') {
             return response()->json([
-                'status'     => 'success',
-                'code'       => 200,
-                'message'    => 'Invoices retrieved successfully.',
-                'results'    => $invoices->count(),
-                'total_paid' => $totalPaid,
-                'duplicates' => $duplicateInvoiceIds,
-                'data'       => $invoices,
+                'status'            => 'success',
+                'code'              => 200,
+                'message'           => 'Invoices retrieved successfully.',
+                'results'           => $invoices->count(),
+                'total_invoiced'    => $totalInvoiced,
+                'total_paid'        => $totalPaid,
+                'total_outstanding' => $totalOutstanding,
+                'duplicates'        => $duplicateInvoiceIds,
+                'data'              => $invoices,
             ], 200);
         }
 
-        return view('invoices.index', compact('invoices', 'totalPaid', 'duplicateInvoiceIds'));
+        return view('invoices.index', compact('invoices', 'totalInvoiced', 'totalPaid', 'totalOutstanding', 'duplicateInvoiceIds'));
     }
 
     /**
@@ -116,7 +120,7 @@ class InvoiceController extends Controller
         $validated = $request->validate([
             'date'          => ['required', 'date'],
             'customer_name' => ['required', 'string', 'max:150'],
-            'paid_amount'   => ['required', 'numeric', 'min:0'],
+            'total_amount'  => ['required', 'numeric', 'min:0'],
         ]);
 
         // 🔒 Atomic Transaction with Row-Level Lock (InnoDB lockForUpdate)
@@ -171,12 +175,14 @@ class InvoiceController extends Controller
             // 3. Format consecutive unique ID: e.g. INV-2026-0007
             $generatedInvoiceId = sprintf('%s-%04d', $counterType, $nextNumber);
 
-            // 4. Create invoice record
+            // 4. Create invoice record — total_amount (المطلوب دفعه), paid_amount defaults to 0, is_paid to false
             return Invoice::create([
                 'invoice_id'    => $generatedInvoiceId,
                 'date'          => $validated['date'],
                 'customer_name' => $validated['customer_name'],
-                'paid_amount'   => $validated['paid_amount'],
+                'total_amount'  => $validated['total_amount'],
+                'paid_amount'   => 0.00,
+                'is_paid'       => false,
             ]);
         });
 
@@ -198,6 +204,8 @@ class InvoiceController extends Controller
      */
     public function show(Request $request, Invoice $invoice)
     {
+        $invoice->load('receipts');
+
         if ($request->wantsJson() || $request->query('format') === 'json') {
             return response()->json([
                 'status'  => 'success',
@@ -227,10 +235,15 @@ class InvoiceController extends Controller
             'invoice_id'    => ['required', 'string', 'max:50'],
             'date'          => ['required', 'date'],
             'customer_name' => ['required', 'string', 'max:150'],
-            'paid_amount'   => ['required', 'numeric', 'min:0'],
+            'total_amount'  => ['required', 'numeric', 'min:0'],
         ]);
 
-        $invoice->update($validated);
+        $invoice->update([
+            'invoice_id'    => $validated['invoice_id'],
+            'date'          => $validated['date'],
+            'customer_name' => $validated['customer_name'],
+            'total_amount'  => $validated['total_amount'],
+        ]);
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -247,9 +260,38 @@ class InvoiceController extends Controller
 
     /**
      * Delete an invoice.
+     * Blocked if invoice is Paid (has_receipts) — cannot delete payment history.
      */
     public function destroy(Request $request, Invoice $invoice)
     {
+        // Block deletion if invoice is marked as paid
+        if ($invoice->is_paid) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'status'  => 'error',
+                    'code'    => 403,
+                    'message' => "Cannot delete invoice '{$invoice->invoice_id}': it is marked as Paid. Paid invoices cannot be deleted.",
+                ], 403);
+            }
+
+            return redirect()->route('invoices.index')
+                ->with('error', "Cannot delete invoice '{$invoice->invoice_id}': it is already Paid. Paid invoices are protected from deletion.");
+        }
+
+        // Block deletion if invoice has payment receipts
+        if ($invoice->hasReceipts()) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'status'  => 'error',
+                    'code'    => 403,
+                    'message' => "Cannot delete invoice '{$invoice->invoice_id}': it has payment receipts attached.",
+                ], 403);
+            }
+
+            return redirect()->route('invoices.index')
+                ->with('error', "Cannot delete invoice '{$invoice->invoice_id}': it has payment receipts and cannot be deleted.");
+        }
+
         $invoiceId = $invoice->invoice_id;
         $invoice->delete();
 

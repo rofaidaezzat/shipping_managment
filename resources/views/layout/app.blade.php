@@ -82,15 +82,29 @@
 
             <!-- Invoices Link -->
             <a href="{{ route('invoices.index') }}"
-               class="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition {{ request()->routeIs('invoices.*') ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+               class="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition {{ (request()->routeIs('invoices.*') && !request()->routeIs('invoices.receipts.*')) ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                 <div class="flex items-center gap-3">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
                     <span>Invoices</span>
                 </div>
-                <span class="text-xs px-2 py-0.5 rounded-full {{ request()->routeIs('invoices.*') ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-800 text-slate-400' }}">
+                <span class="text-xs px-2 py-0.5 rounded-full {{ (request()->routeIs('invoices.*') && !request()->routeIs('invoices.receipts.*')) ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-800 text-slate-400' }}">
                     {{ \App\Models\Invoice::count() }}
+                </span>
+            </a>
+
+            <!-- Receipts Link -->
+            <a href="{{ route('receipts.index') }}"
+               class="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition {{ (request()->routeIs('receipts.*') || request()->routeIs('invoices.receipts.*')) ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                <div class="flex items-center gap-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8h4"/>
+                    </svg>
+                    <span>Receipts</span>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded-full {{ (request()->routeIs('receipts.*') || request()->routeIs('invoices.receipts.*')) ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-800 text-slate-400' }}">
+                    {{ \App\Models\Receipt::count() }}
                 </span>
             </a>
         </nav>

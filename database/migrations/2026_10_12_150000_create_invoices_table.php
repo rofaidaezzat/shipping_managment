@@ -13,7 +13,10 @@ return new class extends Migration
             $table->string('invoice_id', 50);
             $table->date('date');
             $table->string('customer_name', 150);
-            $table->decimal('paid_amount', 12, 2)->default(0);
+            $table->decimal('total_amount', 12, 2)->default(0); // المبلغ المفروض يدفع (Amount Due / Total)
+            $table->decimal('paid_amount', 12, 2)->default(0);  // المبلغ المدفوع بالفعل
+            $table->boolean('is_paid')->default(false);
+            $table->timestamp('paid_at')->nullable();
             $table->timestamps();
         });
     }

@@ -76,20 +76,27 @@
                 @enderror
             </div>
 
-            {{-- Paid Amount --}}
+            {{-- Invoice Amount (المبلغ المطلوب دفعه) --}}
             <div>
-                <label for="paid_amount" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Paid Amount ($ USD) <span class="text-rose-500">*</span>
+                <label for="total_amount" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Invoice Amount (Amount Due) <span class="text-rose-500">*</span>
+                    <span class="text-slate-400 font-normal lowercase">(المبلغ المطلوب دفعه)</span>
                 </label>
                 <div class="relative">
                     <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-semibold">$</span>
-                    <input type="number" step="0.01" min="0" name="paid_amount" id="paid_amount"
-                           value="{{ old('paid_amount', $invoice->paid_amount) }}" required
-                           class="w-full pl-8 pr-4 py-2.5 rounded-lg border {{ $errors->has('paid_amount') ? 'border-rose-400 bg-rose-50/30' : 'border-slate-300' }} focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-mono text-slate-900">
+                    <input type="number" step="0.01" min="0" name="total_amount" id="total_amount"
+                           value="{{ old('total_amount', $invoice->total_amount) }}" required
+                           class="w-full pl-8 pr-4 py-2.5 rounded-lg border {{ $errors->has('total_amount') ? 'border-rose-400 bg-rose-50/30' : 'border-slate-300' }} focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-mono text-slate-900">
                 </div>
-                @error('paid_amount')
+                @error('total_amount')
                     <p class="text-xs text-rose-500 mt-1">{{ $message }}</p>
                 @enderror
+            </div>
+
+            {{-- Paid Amount Info Card --}}
+            <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs">
+                <span class="text-slate-500">Currently Paid Amount:</span>
+                <span class="font-mono font-bold text-emerald-600">${{ number_format($invoice->paid_amount, 2) }}</span>
             </div>
 
             <div class="pt-4 border-t border-slate-100 flex items-center justify-between">

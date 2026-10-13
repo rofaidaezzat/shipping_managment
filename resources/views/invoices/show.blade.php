@@ -16,6 +16,23 @@
             Back to Invoices
         </a>
         <div class="flex items-center gap-3">
+            {{-- Record Payment button (only if unpaid) --}}
+            @if(!$invoice->is_paid)
+                <a href="{{ route('invoices.receipts.create', $invoice) }}"
+                   class="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition shadow-sm shadow-emerald-400/20">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Record Payment
+                </a>
+            @else
+                <span class="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-sm font-semibold cursor-default">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Paid in Full
+                </span>
+            @endif
             <a href="{{ route('invoices.edit', $invoice) }}" class="inline-flex items-center gap-1.5 px-4 py-2 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition shadow-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -50,9 +67,18 @@
             <div class="sm:text-right">
                 <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Invoice Number</span>
                 <h3 class="text-2xl font-mono font-bold text-slate-900 mt-0.5">{{ $invoice->invoice_id }}</h3>
-                <span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    ● Paid in Full
-                </span>
+                @if($invoice->is_paid)
+                    <span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        ● Paid in Full
+                        @if($invoice->paid_at)
+                            — {{ $invoice->paid_at->format('M d, Y') }}
+                        @endif
+                    </span>
+                @else
+                    <span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                        ● Unpaid
+                    </span>
+                @endif
             </div>
         </div>
 
@@ -92,8 +118,8 @@
                             <span class="text-xs text-slate-400">Container terminal handling and port logistics charges</span>
                         </td>
                         <td class="py-4 text-right font-mono text-slate-600">1</td>
-                        <td class="py-4 text-right font-mono font-semibold text-slate-900">
-                            ${{ number_format($invoice->paid_amount, 2) }}
+                        <td class="py-4 text-right font-mono font-bold text-slate-900">
+                            ${{ number_format($invoice->total_amount, 2) }}
                         </td>
                     </tr>
                 </tbody>
@@ -104,18 +130,106 @@
         <div class="pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div class="text-xs text-slate-400">
                 Created on {{ $invoice->created_at ? $invoice->created_at->format('M d, Y H:i') : 'N/A' }}
+                @if($invoice->is_paid && $invoice->paid_at)
+                    <br>Paid on {{ $invoice->paid_at->format('M d, Y H:i') }}
+                @endif
             </div>
-            <div class="w-full sm:w-64 space-y-2 text-right">
+            <div class="w-full sm:w-72 space-y-2 text-right">
                 <div class="flex justify-between text-sm text-slate-600">
-                    <span>Subtotal:</span>
-                    <span class="font-mono">${{ number_format($invoice->paid_amount, 2) }}</span>
+                    <span>Invoice Amount (المطلوب):</span>
+                    <span class="font-mono font-bold text-slate-900">
+                        ${{ number_format($invoice->total_amount, 2) }}
+                    </span>
+                </div>
+                <div class="flex justify-between text-sm text-slate-600">
+                    <span>Paid Amount (المدفوع):</span>
+                    <span class="font-mono font-bold {{ $invoice->is_paid ? 'text-emerald-600' : 'text-slate-400' }}">
+                        ${{ number_format($invoice->paid_amount, 2) }}
+                    </span>
                 </div>
                 <div class="flex justify-between text-base font-bold text-slate-900 pt-2 border-t border-slate-100">
-                    <span>Total Paid:</span>
-                    <span class="font-mono text-emerald-600">${{ number_format($invoice->paid_amount, 2) }}</span>
+                    <span>Status / Balance:</span>
+                    @if($invoice->is_paid)
+                        <span class="font-mono text-emerald-600">Settled (Paid)</span>
+                    @else
+                        <span class="font-mono text-amber-600">${{ number_format($invoice->remaining_amount, 2) }} Due</span>
+                    @endif
                 </div>
             </div>
         </div>
     </div>
+
+    {{-- Payment Receipts Section --}}
+    @if($invoice->receipts->isNotEmpty())
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h4 class="text-sm font-bold text-slate-800">Payment Receipts</h4>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">
+                    {{ $invoice->receipts->count() }} {{ Str::plural('Payment', $invoice->receipts->count()) }}
+                </span>
+            </div>
+            <table class="w-full text-sm text-left">
+                <thead class="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <tr>
+                        <th class="py-3 px-6">Receipt #</th>
+                        <th class="py-3 px-6">Date</th>
+                        <th class="py-3 px-6">Method</th>
+                        <th class="py-3 px-6">Notes</th>
+                        <th class="py-3 px-6 text-right">Amount Paid</th>
+                        <th class="py-3 px-6 text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @foreach($invoice->receipts as $receipt)
+                        <tr class="hover:bg-slate-50/50 transition">
+                            <td class="py-3.5 px-6 font-mono text-xs font-semibold text-indigo-600">
+                                <a href="{{ route('receipts.show', $receipt) }}" class="hover:underline">
+                                    REC-{{ str_pad($receipt->id, 4, '0', STR_PAD_LEFT) }}
+                                </a>
+                            </td>
+                            <td class="py-3.5 px-6 text-slate-700">
+                                {{ $receipt->payment_date ? $receipt->payment_date->format('M d, Y') : '—' }}
+                            </td>
+                            <td class="py-3.5 px-6">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                    {{ $receipt->payment_method }}
+                                </span>
+                            </td>
+                            <td class="py-3.5 px-6 text-slate-500 text-xs">{{ $receipt->notes ?? '—' }}</td>
+                            <td class="py-3.5 px-6 text-right font-mono font-bold text-emerald-600">
+                                ${{ number_format($receipt->amount_paid, 2) }}
+                            </td>
+                            <td class="py-3.5 px-6 text-center">
+                                <a href="{{ route('receipts.show', $receipt) }}"
+                                   class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 transition">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                                    </svg>
+                                    Voucher
+                                </a>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @elseif(!$invoice->is_paid)
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-center gap-4">
+            <div class="w-10 h-10 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div class="flex-1">
+                <p class="text-sm font-semibold text-amber-800">No payments recorded yet.</p>
+                <p class="text-xs text-amber-600 mt-0.5">This invoice is currently <strong>Unpaid</strong>. Click "Record Payment" above to mark it as paid.</p>
+            </div>
+            <a href="{{ route('invoices.receipts.create', $invoice) }}"
+               class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition shrink-0">
+                Record Payment
+            </a>
+        </div>
+    @endif
+
 </div>
 @endsection
