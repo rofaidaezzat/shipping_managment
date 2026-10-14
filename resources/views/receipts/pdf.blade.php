@@ -177,7 +177,11 @@
                     </div>
                 </td>
                 <td style="width: 40%; text-align: right; vertical-align: top;">
-                    <span class="voucher-title-badge">&#9679; Official Payment Receipt</span>
+                    @if($receipt->status === 'rejected')
+                        <span class="voucher-title-badge" style="background: #ffe4e6; color: #9f1239; border: 1px solid #fecdd3;">&#9679; REJECTED / VOID</span>
+                    @else
+                        <span class="voucher-title-badge">&#9679; Official Payment Receipt</span>
+                    @endif
                     <div class="voucher-id">#REC-{{ str_pad($receipt->id, 4, '0', STR_PAD_LEFT) }}</div>
                     <div style="font-size: 11px; color: #64748b;">
                         Date: {{ $receipt->payment_date ? $receipt->payment_date->format('F d, Y') : '—' }}
@@ -212,7 +216,18 @@
                 </td>
                 <td class="details-col">
                     <div class="col-label">For Invoice Settlement</div>
-                    @if($receipt->invoice)
+                    @if($receipt->invoices->isNotEmpty())
+                        <div class="col-val-main" style="color: #4338ca; font-family: 'Courier New', Courier, monospace;">
+                            {{ $receipt->invoices->pluck('invoice_id')->implode(', ') }}
+                        </div>
+                        <div class="col-val-sub">
+                            @if($receipt->invoices->count() == 1)
+                                Invoice Date: {{ $receipt->invoice?->date ? $receipt->invoice->date->format('M d, Y') : '—' }}
+                            @else
+                                {{ $receipt->invoices->count() }} Linked Invoices
+                            @endif
+                        </div>
+                    @elseif($receipt->invoice)
                         <div class="col-val-main" style="color: #4338ca; font-family: 'Courier New', Courier, monospace;">
                             {{ $receipt->invoice->invoice_id }}
                         </div>
@@ -220,7 +235,7 @@
                             Invoice Date: {{ $receipt->invoice->date ? $receipt->invoice->date->format('M d, Y') : '—' }}
                         </div>
                     @else
-                        <div class="col-val-main">Invoice #{{ $receipt->invoice_id }}</div>
+                        <div class="col-val-main">—</div>
                     @endif
                 </td>
             </tr>

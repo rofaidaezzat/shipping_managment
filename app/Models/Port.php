@@ -6,9 +6,13 @@ use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Port extends Model
 {
+    use LogsActivity;
+
     protected $fillable = [
         'company_id',
         'type',
@@ -17,6 +21,16 @@ class Port extends Model
         'code',
         'is_active',
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->useLogName('port')
+            ->setDescriptionForEvent(fn(string $eventName) => "Port '{$this->name}' was {$eventName}");
+    }
 
     protected $casts = [
         'is_active' => 'boolean',

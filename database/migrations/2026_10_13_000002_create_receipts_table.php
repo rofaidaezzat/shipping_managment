@@ -16,6 +16,7 @@ return new class extends Migration
             $table->decimal('amount_paid', 12, 2);
             $table->date('payment_date');
             $table->string('payment_method', 50)->default('Cash'); // Cash, Bank Transfer, Cheque, etc.
+            $table->string('status', 20)->default('completed');    // completed, rejected
             $table->string('notes', 500)->nullable();
             $table->timestamps();
         });

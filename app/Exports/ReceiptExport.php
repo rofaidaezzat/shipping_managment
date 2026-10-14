@@ -17,7 +17,7 @@ class ReceiptExport implements FromCollection, WithHeadings, WithMapping
      */
     public function collection(): Collection
     {
-        return Receipt::with('invoice')
+        return Receipt::with(['invoices', 'paymentMethods'])
             ->orderBy('payment_date', 'desc')
             ->orderBy('id', 'desc')
             ->get();
@@ -32,6 +32,7 @@ class ReceiptExport implements FromCollection, WithHeadings, WithMapping
     {
         return [
             'Receipt ID',
+            'Status',
             'Invoice #',
             'Customer Name',
             'Amount Paid ($)',
@@ -50,10 +51,19 @@ class ReceiptExport implements FromCollection, WithHeadings, WithMapping
      */
     public function map($receipt): array
     {
+        $invoiceIds = $receipt->invoices->isNotEmpty() 
+            ? $receipt->invoices->pluck('invoice_id')->implode(', ') 
+            : ($receipt->invoice->invoice_id ?? 'N/A');
+
+        $customerNames = $receipt->invoices->isNotEmpty()
+            ? $receipt->invoices->pluck('customer_name')->filter()->unique()->implode(', ')
+            : ($receipt->invoice->customer_name ?? 'N/A');
+
         return [
             'REC-' . str_pad($receipt->id, 4, '0', STR_PAD_LEFT),
-            $receipt->invoice->invoice_id ?? 'N/A',
-            $receipt->invoice->customer_name ?? 'N/A',
+            ucfirst($receipt->status ?? 'completed'),
+            $invoiceIds ?: 'N/A',
+            $customerNames ?: 'N/A',
             number_format($receipt->amount_paid, 2),
             $receipt->payment_date ? $receipt->payment_date->format('Y-m-d') : 'N/A',
             $receipt->payment_method,

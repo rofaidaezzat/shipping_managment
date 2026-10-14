@@ -65,9 +65,9 @@ class ProcessDataJob implements ShouldQueue
 
         if ($this->data instanceof Receipt) {
             $receipt = $this->data;
-            $receipt->load('invoice');
+            $receipt->load(['invoices', 'paymentMethods']);
         } elseif (is_numeric($this->data)) {
-            $receipt = Receipt::with('invoice')->find($this->data);
+            $receipt = Receipt::with(['invoices', 'paymentMethods'])->find($this->data);
         }
 
         if (! $receipt) {

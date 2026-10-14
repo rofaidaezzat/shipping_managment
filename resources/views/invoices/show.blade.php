@@ -174,6 +174,7 @@
                         <th class="py-3 px-6">Receipt #</th>
                         <th class="py-3 px-6">Date</th>
                         <th class="py-3 px-6">Method</th>
+                        <th class="py-3 px-6">Status</th>
                         <th class="py-3 px-6">Notes</th>
                         <th class="py-3 px-6 text-right">Amount Paid</th>
                         <th class="py-3 px-6 text-center">Action</th>
@@ -181,7 +182,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @foreach($invoice->receipts as $receipt)
-                        <tr class="hover:bg-slate-50/50 transition">
+                        <tr class="hover:bg-slate-50/50 transition {{ $receipt->status === 'rejected' ? 'bg-rose-50/20' : '' }}">
                             <td class="py-3.5 px-6 font-mono text-xs font-semibold text-indigo-600">
                                 <a href="{{ route('receipts.show', $receipt) }}" class="hover:underline">
                                     REC-{{ str_pad($receipt->id, 4, '0', STR_PAD_LEFT) }}
@@ -195,9 +196,24 @@
                                     {{ $receipt->payment_method }}
                                 </span>
                             </td>
+                            <td class="py-3.5 px-6">
+                                @if($receipt->status === 'rejected')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                        Rejected
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        Completed
+                                    </span>
+                                @endif
+                            </td>
                             <td class="py-3.5 px-6 text-slate-500 text-xs">{{ $receipt->notes ?? '—' }}</td>
-                            <td class="py-3.5 px-6 text-right font-mono font-bold text-emerald-600">
-                                ${{ number_format($receipt->amount_paid, 2) }}
+                            <td class="py-3.5 px-6 text-right font-mono font-bold">
+                                @if($receipt->status === 'rejected')
+                                    <span class="text-slate-400 line-through">${{ number_format($receipt->amount_paid, 2) }}</span>
+                                @else
+                                    <span class="text-emerald-600">${{ number_format($receipt->amount_paid, 2) }}</span>
+                                @endif
                             </td>
                             <td class="py-3.5 px-6 text-center">
                                 <div class="inline-flex items-center gap-1.5 justify-center">
@@ -220,19 +236,28 @@
                                     </a>
 
                                     {{-- Reject Receipt --}}
-                                    <form action="{{ route('receipts.destroy', $receipt) }}" method="POST" class="inline"
-                                          onsubmit="return confirm('Reject receipt REC-{{ str_pad($receipt->id, 4, '0', STR_PAD_LEFT) }}? This invoice will return to UNPAID status.');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                                class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 transition"
-                                                title="Reject Receipt & Return to Unpaid">
-                                            <svg class="w-3.5 h-3.5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    @if($receipt->status !== 'rejected')
+                                        <form action="{{ route('receipts.destroy', $receipt) }}" method="POST" class="inline"
+                                              onsubmit="return confirmRejectReceipt(event, this, 'REC-{{ str_pad($receipt->id, 4, '0', STR_PAD_LEFT) }}', '{{ $invoice->invoice_id }}');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                    class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 transition"
+                                                    title="Reject Receipt & Return to Unpaid">
+                                                <svg class="w-3.5 h-3.5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                                Reject
+                                            </button>
+                                        </form>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-rose-50/60 text-rose-600 border border-rose-100 cursor-default" title="This receipt was rejected">
+                                            <svg class="w-3.5 h-3.5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
                                             </svg>
-                                            Reject
-                                        </button>
-                                    </form>
+                                            Rejected
+                                        </span>
+                                    @endif
                                 </div>
                             </td>
                         </tr>

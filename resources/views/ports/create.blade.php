@@ -144,6 +144,7 @@
 
                 {{-- Is Active --}}
                 <div class="flex items-end pb-1">
+                    <input type="hidden" name="is_active" value="0">
                     <label class="flex items-center gap-3 cursor-pointer">
                         <input type="checkbox" name="is_active" value="1" {{ old('is_active', true) ? 'checked' : '' }}
                                class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300">

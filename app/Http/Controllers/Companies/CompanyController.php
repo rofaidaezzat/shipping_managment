@@ -50,7 +50,7 @@ class CompanyController extends Controller
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
-        $validated['is_active'] = $request->boolean('is_active', true);
+        $validated['is_active'] = $request->boolean('is_active');
 
         $company = Company::create($validated);
 

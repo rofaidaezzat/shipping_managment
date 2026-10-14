@@ -120,6 +120,15 @@
                 </select>
             </div>
 
+            {{-- Status Filter --}}
+            <div class="w-full md:w-36">
+                <select name="status" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="">All Statuses</option>
+                    <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Completed</option>
+                    <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>Rejected</option>
+                </select>
+            </div>
+
             {{-- Date Range (Optional) --}}
             <div class="flex items-center gap-2">
                 <input type="date" name="date_from" value="{{ request('date_from') }}"
@@ -136,7 +145,7 @@
                 <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-medium transition shadow-sm">
                     Filter
                 </button>
-                @if(request()->hasAny(['search', 'payment_method', 'date_from', 'date_to']))
+                @if(request()->hasAny(['search', 'payment_method', 'status', 'date_from', 'date_to']))
                     <a href="{{ route('receipts.index') }}" class="px-3 py-2 text-slate-500 hover:text-slate-800 text-sm transition">
                         Clear
                     </a>
@@ -156,7 +165,9 @@
                         <th class="py-3.5 px-6">Customer</th>
                         <th class="py-3.5 px-6">Payment Date</th>
                         <th class="py-3.5 px-6">Method</th>
+                        <th class="py-3.5 px-6 text-right">Amount Due</th>
                         <th class="py-3.5 px-6 text-right">Amount Paid</th>
+                        <th class="py-3.5 px-6">Status</th>
                         <th class="py-3.5 px-6">Notes</th>
                         <th class="py-3.5 px-6 text-center">Actions</th>
                     </tr>
@@ -174,29 +185,31 @@
                                 </span>
                             </td>
 
-                            {{-- Linked Invoice # --}}
-                            <td class="py-4 px-6 whitespace-nowrap">
-                                @if($receipt->invoice)
-                                    <a href="{{ route('invoices.show', $receipt->invoice) }}"
-                                       class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-900 font-mono font-semibold transition group-hover:underline">
-                                        <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            {{-- Linked Invoice(s) --}}
+                            <td class="py-4 px-6">
+                                @forelse($receipt->invoices as $inv)
+                                    <a href="{{ route('invoices.show', $inv) }}"
+                                       class="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-900 font-mono font-semibold text-xs transition hover:underline">
+                                        <svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                         </svg>
-                                        {{ $receipt->invoice->invoice_id }}
+                                        {{ $inv->invoice_id }}
+                                        <span class="text-slate-400 font-mono font-normal">(${{ number_format($inv->pivot->amount, 2) }})</span>
                                     </a>
-                                @else
-                                    <span class="text-slate-400 text-xs italic">Invoice #{{ $receipt->invoice_id }}</span>
-                                @endif
+                                @empty
+                                    <span class="text-slate-400 text-xs italic">—</span>
+                                @endforelse
                             </td>
 
-                            {{-- Customer --}}
+                            {{-- Customer (from first invoice) --}}
                             <td class="py-4 px-6 whitespace-nowrap">
+                                @php $firstInv = $receipt->invoices->first(); @endphp
                                 <div class="flex items-center gap-2.5">
                                     <div class="w-7 h-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs uppercase shrink-0">
-                                        {{ substr($receipt->invoice->customer_name ?? 'C', 0, 1) }}
+                                        {{ substr($firstInv?->customer_name ?? 'C', 0, 1) }}
                                     </div>
                                     <span class="font-medium text-slate-900">
-                                        {{ $receipt->invoice->customer_name ?? '—' }}
+                                        {{ $firstInv?->customer_name ?? '—' }}
                                     </span>
                                 </div>
                             </td>
@@ -214,26 +227,85 @@
 
                             {{-- Payment Method --}}
                             <td class="py-4 px-6 whitespace-nowrap">
+                                @if($receipt->paymentMethods->count() > 1)
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach($receipt->paymentMethods->pluck('method')->unique() as $m)
+                                            @php
+                                                $methodColors = [
+                                                    'Cash'           => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                                    'Bank Transfer'  => 'bg-sky-50 text-sky-700 border-sky-200',
+                                                    'Credit Card'    => 'bg-purple-50 text-purple-700 border-purple-200',
+                                                    'Cheque'         => 'bg-amber-50 text-amber-700 border-amber-200',
+                                                    'Online Payment' => 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                                                ];
+                                                $bc = $methodColors[$m] ?? 'bg-slate-100 text-slate-700 border-slate-200';
+                                            @endphp
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border {{ $bc }}">
+                                                {{ $m }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    @php
+                                        $methodColors = [
+                                            'Cash'           => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                            'Bank Transfer'  => 'bg-sky-50 text-sky-700 border-sky-200',
+                                            'Credit Card'    => 'bg-purple-50 text-purple-700 border-purple-200',
+                                            'Cheque'         => 'bg-amber-50 text-amber-700 border-amber-200',
+                                            'Online Payment' => 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                                        ];
+                                        $singleMethod = $receipt->paymentMethods->first()?->method ?? $receipt->payment_method;
+                                        $badgeClass   = $methodColors[$singleMethod] ?? 'bg-slate-100 text-slate-700 border-slate-200';
+                                    @endphp
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ $badgeClass }}">
+                                        {{ $singleMethod }}
+                                    </span>
+                                @endif
+                            </td>
+
+                            {{-- Amount Due (invoice total_amount) --}}
+                            <td class="py-4 px-6 whitespace-nowrap text-right">
                                 @php
-                                    $methodColors = [
-                                        'Cash'            => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                                        'Bank Transfer'   => 'bg-sky-50 text-sky-700 border-sky-200',
-                                        'Credit Card'     => 'bg-purple-50 text-purple-700 border-purple-200',
-                                        'Cheque'          => 'bg-amber-50 text-amber-700 border-amber-200',
-                                        'Online Payment'  => 'bg-indigo-50 text-indigo-700 border-indigo-200',
-                                    ];
-                                    $badgeClass = $methodColors[$receipt->payment_method] ?? 'bg-slate-100 text-slate-700 border-slate-200';
+                                    $amountDue = $receipt->amount_due;
                                 @endphp
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ $badgeClass }}">
-                                    {{ $receipt->payment_method }}
-                                </span>
+                                @if($amountDue > 0)
+                                    <span class="font-mono font-semibold text-slate-700">
+                                        ${{ number_format($amountDue, 2) }}
+                                    </span>
+                                    @if($receipt->invoices->count() > 1)
+                                        <span class="text-[10px] text-slate-400 block font-sans">({{ $receipt->invoices->count() }} invoices)</span>
+                                    @endif
+                                @else
+                                    <span class="text-slate-400 text-xs">—</span>
+                                @endif
                             </td>
 
                             {{-- Amount Paid --}}
                             <td class="py-4 px-6 whitespace-nowrap text-right">
-                                <span class="font-mono font-bold text-base text-emerald-600">
-                                    ${{ number_format($receipt->amount_paid, 2) }}
-                                </span>
+                                @if($receipt->status === 'rejected')
+                                    <span class="font-mono font-bold text-base text-slate-400 line-through" title="Rejected payment">
+                                        ${{ number_format($receipt->amount_paid, 2) }}
+                                    </span>
+                                @else
+                                    <span class="font-mono font-bold text-base text-emerald-600">
+                                        ${{ number_format($receipt->amount_paid, 2) }}
+                                    </span>
+                                @endif
+                            </td>
+
+                            {{-- Status --}}
+                            <td class="py-4 px-6 whitespace-nowrap">
+                                @if($receipt->status === 'rejected')
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                        Rejected
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        Completed
+                                    </span>
+                                @endif
                             </td>
 
                             {{-- Notes --}}
@@ -264,39 +336,49 @@
                                         <span>PDF</span>
                                     </a>
 
-                                    @if($receipt->invoice)
-                                        {{-- View Invoice --}}
-                                        <a href="{{ route('invoices.show', $receipt->invoice) }}"
+                                    {{-- View Invoice(s) --}}
+                                    @foreach($receipt->invoices as $inv)
+                                        <a href="{{ route('invoices.show', $inv) }}"
                                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
-                                           title="Go to Invoice">
+                                           title="Go to {{ $inv->invoice_id }}">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                             </svg>
-                                            <span>Invoice</span>
+                                            <span>{{ $inv->invoice_id }}</span>
                                         </a>
-                                    @endif
+                                    @endforeach
 
-                                    {{-- Reject Receipt (Undo Payment & Revert Invoice to Unpaid) --}}
-                                    <form action="{{ route('receipts.destroy', $receipt) }}" method="POST" class="inline"
-                                          onsubmit="return confirm('Reject receipt REC-{{ str_pad($receipt->id, 4, '0', STR_PAD_LEFT) }}? This will cancel this payment and return invoice {{ $receipt->invoice->invoice_id ?? '' }} back to UNPAID status.');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 border border-rose-200 hover:border-rose-300 transition"
-                                                title="Reject Receipt & Revert Invoice to Unpaid">
-                                            <svg class="w-3.5 h-3.5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    {{-- Reject Receipt --}}
+                                    @if($receipt->status !== 'rejected')
+                                        @php $invIds = $receipt->invoices->pluck('invoice_id')->implode(', '); @endphp
+                                        <form action="{{ route('receipts.destroy', $receipt) }}" method="POST" class="inline"
+                                              onsubmit="return confirmRejectReceipt(event, this, 'REC-{{ str_pad($receipt->id, 4, '0', STR_PAD_LEFT) }}', '{{ $invIds }}');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 border border-rose-200 hover:border-rose-300 transition"
+                                                    title="Reject Receipt & Revert Invoice(s) to Unpaid">
+                                                <svg class="w-3.5 h-3.5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                                <span>Reject</span>
+                                            </button>
+                                        </form>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-rose-50/60 text-rose-600 border border-rose-100 cursor-default" title="This receipt was rejected">
+                                            <svg class="w-3.5 h-3.5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
                                             </svg>
-                                            <span>Reject</span>
-                                        </button>
-                                    </form>
+                                            <span>Rejected</span>
+                                        </span>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="py-12 text-center">
+                            <td colspan="10" class="py-12 text-center">
                                 <div class="max-w-sm mx-auto space-y-3">
                                     <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

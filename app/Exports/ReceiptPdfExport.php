@@ -20,7 +20,7 @@ class ReceiptPdfExport
      */
     public function generate()
     {
-        $this->receipt->load('invoice');
+        $this->receipt->load(['invoices', 'paymentMethods']);
 
         return Pdf::loadView('receipts.pdf', [
             'receipt' => $this->receipt,
