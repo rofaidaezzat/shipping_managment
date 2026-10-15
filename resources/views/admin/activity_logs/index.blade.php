@@ -318,23 +318,29 @@
                             </td>
 
                             <!-- View Details Button -->
+                            @php
+                                $causerRole  = $causer ? ($causer->role ?? 'System') : 'System';
+                                $causerEmail = $displayEmail ?? '—';
+                                $createdAt   = $activity->created_at ? $activity->created_at->format('M d, Y H:i:s') : '—';
+                                $modalData   = [
+                                    'id'           => $activity->id,
+                                    'event'        => $activity->event,
+                                    'badge'        => $eventBadge,
+                                    'description'  => $activity->description,
+                                    'subject_type' => $subjectClass,
+                                    'subject_id'   => $activity->subject_id,
+                                    'causer_name'  => $displayName,
+                                    'causer_role'  => $causerRole,
+                                    'causer_email' => $causerEmail,
+                                    'created_at'   => $createdAt,
+                                    'attributes'   => $attributes,
+                                    'old'          => $old,
+                                    'properties'   => $activity->properties,
+                                ];
+                            @endphp
                             <td class="py-3.5 px-4 whitespace-nowrap text-right">
                                 <button type="button"
-                                        onclick='openActivityModal(@json([
-                                            "id" => $activity->id,
-                                            "event" => $activity->event,
-                                            "badge" => $eventBadge,
-                                            "description" => $activity->description,
-                                            "subject_type" => $subjectClass,
-                                            "subject_id" => $activity->subject_id,
-                                            "causer_name" => $displayName,
-                                            "causer_role" => $causer?->role ?? "System",
-                                            "causer_email" => $displayEmail ?? "—",
-                                            "created_at" => $activity->created_at ? $activity->created_at->format("M d, Y H:i:s") : "—",
-                                            "attributes" => $attributes,
-                                            "old" => $old,
-                                            "properties" => $activity->properties,
-                                        ]))'
+                                        onclick='openActivityModal(@json($modalData))'
                                         class="p-1.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition"
                                         title="View Full Changes & Properties">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
