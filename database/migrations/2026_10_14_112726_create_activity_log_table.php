@@ -6,8 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
-    {
+    public function up(): void{
         $connection = config('activitylog.database_connection');
         $tableName  = config('activitylog.table_name', 'activity_log');
 
